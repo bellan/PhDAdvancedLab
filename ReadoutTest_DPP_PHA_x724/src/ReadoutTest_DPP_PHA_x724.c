@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
     int Nb=0;
     int MajorNumber;
     int BitMask = 0;
-    uint64_t CurrentTime, PrevRateTime, ElapsedTime;
+    uint64_t CurrentTime, PrevRateTime, ElapsedTime, StartingTime;
     uint32_t NumEvents[MaxNChannels];
     CAEN_DGTZ_BoardInfo_t           BoardInfo; // Needed to check firmware release
 
@@ -201,8 +201,8 @@ int main(int argc, char *argv[])
         \****************************/
         Params[b].AcqMode = CAEN_DGTZ_DPP_ACQ_MODE_List;          // CAEN_DGTZ_DPP_ACQ_MODE_List or CAEN_DGTZ_DPP_ACQ_MODE_Oscilloscope
         Params[b].RecordLength = 5000;                              // Num of samples of the waveforms (only for Oscilloscope mode)
-        Params[b].ChannelMask = 0x3;                               // Channel enable mask
-        Params[b].EventAggr = 0;                                   // number of events in one aggregate (0=automatic)
+        Params[b].ChannelMask = 0x5;                               // Channel enable mask
+        Params[b].EventAggr = 1;                                   // number of events in one aggregate (0=automatic)
         Params[b].PulsePolarity = CAEN_DGTZ_PulsePolarityPositive; // Pulse Polarity (this parameter can be individual)
 
         /****************************\
@@ -248,8 +248,9 @@ int main(int argc, char *argv[])
         ret = CAEN_DGTZ_OpenDigitizer(Params[b].LinkType, b, 0, Params[b].VMEBaseAddress, &handle[b]);
 
         if (ret) {
-            printf("Can't open digitizer\n");
-            goto QuitProgram;    
+	  std::cout << "Can't open digitizer " << ret << std::endl;
+	  std::cout << Params[b].LinkType << " " << b << " " << Params[b].VMEBaseAddress << std::endl;
+	  goto QuitProgram;    
         }
         
         /* Once we have the handler to the digitizer, we use it to call the other functions */
@@ -337,6 +338,7 @@ int main(int argc, char *argv[])
                     CAEN_DGTZ_SWStartAcquisition(handle[b]);
                     printf("Acquisition Started for Board %d\n", b);
                 }
+		StartingTime = get_time();
                 AcqRun = 1;
             }
             if (c == 'S')  {
@@ -355,10 +357,13 @@ int main(int argc, char *argv[])
     
         /* Calculate throughput and trigger rate (every second) */
         CurrentTime = get_time();
+	uint64_t TotalTime = CurrentTime - StartingTime;
+	if(TotalTime > 300000) goto QuitProgram; 
         ElapsedTime = CurrentTime - PrevRateTime; /* milliseconds */
         if (ElapsedTime > 1000) {
             system(CLEARSCR);
             PrintInterface();
+	    std::cout << "Elapsed time: " << TotalTime/1000. << " s" << std::endl;
             printf("Readout Rate=%.2f MB\n", (float)Nb/((float)ElapsedTime*1048.576f));
             for(b=0; b<MAXNB; b++) {
                 printf("\nBoard %d:\n",b);
@@ -381,7 +386,7 @@ int main(int argc, char *argv[])
             /* Read data from the board */
             ret = CAEN_DGTZ_ReadData(handle[b], CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT, buffer, &BufferSize);
             if (ret) {
-                printf("Readout Error\n");
+	      std::cout << "Readout Error: " << ret << std::endl;
                 goto QuitProgram;    
             }
             if (BufferSize == 0)
@@ -400,7 +405,7 @@ int main(int argc, char *argv[])
             for (ch = 0; ch < MaxNChannels; ch++) {
                 if (!(Params[b].ChannelMask & (1<<ch)))
                     continue;
-		if(NumEvents[ch] != 0) outputfile << "### " << ch << " " << NumEvents[ch] << " " << Events[ch][0].TimeTag << " " << Events[ch][NumEvents[ch]-1].TimeTag << std::endl;
+		//if(NumEvents[ch] != 0) outputfile << "### " << ch << " " << NumEvents[ch] << " " << Events[ch][0].TimeTag << " " << Events[ch][NumEvents[ch]-1].TimeTag << std::endl;
 		//Time Tag: this is the trigger time stamp, i.e. the time of arrival of the pulse. It is espressed in sampling clock unit,
 		//therefore the user has to multiply for the corresponding smapling clock to get the value in ns. Sampling clock
 		//values are: 10 ns for x724
