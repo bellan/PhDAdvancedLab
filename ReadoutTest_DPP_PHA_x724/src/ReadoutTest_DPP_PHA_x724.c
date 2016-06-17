@@ -25,6 +25,10 @@
 
 #include <bitset>
 
+#include <stdexcept>
+#include <string>
+
+
 //#define INDIVIDUAL_TRIGGER_INPUTS
 // The following define must be set to the actual number of connected boards
 #define MAXNB   1
@@ -127,6 +131,25 @@ int ProgramDigitizer(int handle, DigitizerParams_t Params, CAEN_DGTZ_DPP_PHA_Par
         return 0;
     }
 }
+
+std::string exec(const char* cmd) {
+    char buffer[128];
+    std::string result = "";
+    FILE* pipe = popen(cmd, "r");
+    if (!pipe) throw std::runtime_error("popen() failed!");
+    try {
+        while (!feof(pipe)) {
+            if (fgets(buffer, 128, pipe) != NULL)
+                result += buffer;
+        }
+    } catch (...) {
+        pclose(pipe);
+        throw;
+    }
+    pclose(pipe);
+    return result;
+}
+
 
 /* ########################################################################### */
 /* MAIN                                                                        */
@@ -443,6 +466,7 @@ QuitProgram:
     CAEN_DGTZ_FreeDPPEvents(handle[0], (void**)(Events));
 
     outputfile.close();
+    exec("paplay /usr/share/sounds/ubuntu/ringtones/Bliss.ogg");
     return ret;
 }
     
