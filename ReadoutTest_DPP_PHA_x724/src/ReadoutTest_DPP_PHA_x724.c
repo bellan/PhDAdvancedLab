@@ -252,6 +252,15 @@ int main(int argc, char *argv[])
             DPPParams[b].twwdt[ch] = 0;
             //DPPParams[b].tsampl[ch] = 10;
             //DPPParams[b].dgain[ch] = 1;
+	    
+	    if(ch == 1){
+	      DPPParams[b].k[ch] = 1500;
+	      DPPParams[b].M[ch] = 5200;
+	      DPPParams[b].m[ch] = 3000;
+	      
+	    }
+
+	    
         }
     }
 
@@ -381,7 +390,7 @@ int main(int argc, char *argv[])
         /* Calculate throughput and trigger rate (every second) */
         CurrentTime = get_time();
 	uint64_t TotalTime = CurrentTime - StartingTime;
-	if(TotalTime > 300000) goto QuitProgram; 
+		if(TotalTime > 300000) goto QuitProgram; // Uncomment it!!
         ElapsedTime = CurrentTime - PrevRateTime; /* milliseconds */
         if (ElapsedTime > 1000) {
             system(CLEARSCR);
@@ -442,7 +451,7 @@ int main(int argc, char *argv[])
                         ExtendedTT[b][ch]++;
                     PrevTime[b][ch] = Events[ch][ev].TimeTag;
                     /* Energy */
-                    if (Events[ch][ev].Energy > 0) {
+		    if (Events[ch][ev].Energy > 0){
 		      //outputfile << Events[ch][ev].Energy << " " << std::bitset<16>(Events[ch][ev].Energy).to_string() << std::endl;
 		      outputfile << ch << " " << Events[ch][ev].TimeTag << " " << ((Events[ch][ev].Energy)&BitMask) 
 				 << " " << Events[ch][ev].Extras << " " << Events[ch][ev].Extras2 << std::endl;
